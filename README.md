@@ -25,3 +25,21 @@ docker logs http-checker
 cd ./section_3
 ansible-playbook playbook.yml --ask-become-pass
 ```
+
+#### Структура проекта
+```
+yadro_test_task/
+│
+├── README.md
+├── section_1/                         # Раздел 1: Скрипт
+│   ├── check_status.py
+│   └── requirements.txt
+│
+├── section_2/                         # Раздел 2: Docker
+│   └── Dockerfile
+│
+└── section_3/                         # Раздел 3: Ansible
+    ├── ansible.cfg
+    ├── inventory.ini
+    └── playbook.yml
+```

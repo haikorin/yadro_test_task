@@ -1,9 +1,12 @@
+---
 - name: Install Docker and run script
   hosts: local
   become: true
   vars:
     image_name: http-checker
     container_name: http-checker
+    target_user: "{{ lookup('env', 'USER') }}"
+    project_root: "{{ playbook_dir }}/.."
 
   tasks:
 
@@ -42,7 +45,7 @@
         name: docker-ce
         state: present
         update_cache: true
-    
+
     - name: Start Docker service
       systemd:
         name: docker
@@ -51,19 +54,29 @@
 
     - name: Add current user to docker group
       user:
-        name: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
+        name: "{{ target_user }}"
         groups: docker
         append: true
 
     - name: Reset connection to apply docker group
       meta: reset_connection
-    
-    - name: Verify Docker installation
+
+    - name: Gather package facts
+      package_facts:
+        manager: apt
+
+    - name: Verify Docker is installed
+      assert:
+        that:
+          - ansible_facts.packages['docker-ce'] is defined
+        fail_msg: "Docker не установлен"
+
+    - name: Show Docker version
       command: docker --version
       register: docker_ver
       changed_when: false
 
-    - name: Show Docker version 
+    - name: Print Docker version
       debug:
         msg: "{{ docker_ver.stdout }}"
 
@@ -71,7 +84,7 @@
   # --Часть 2. Сборка образа и запуск контейнера ---------------------
 
     - name: Build Docker image
-      shell: docker build -t "{{ image_name }}" -f "{{ playbook_dir }}/../section_2/Dockerfile" "{{ playbook_dir }}/../section_1"
+      shell: docker build -t "{{ image_name }}" -f "{{ project_root }}/section_2/Dockerfile" "{{ project_root }}/section_1"
       changed_when: true
 
     - name: Remove old container if exists
@@ -82,7 +95,17 @@
       shell: docker run --name "{{ container_name }}" "{{ image_name }}"
       register: run_result
       changed_when: true
+      ignore_errors: true
 
+    - name: Check if container exists
+      command: docker ps -a --filter "name={{ container_name }}" --format "{{ '{{' }}.Names{{ '}}' }}"
+      register: container_check
+      changed_when: false
+
+    - name: Verify container was created
+      fail:
+        msg: "Container {{ container_name }} was not created"
+      when: container_name not in container_check.stdout
 
   # --Часть 3. Получение логов и проверка кода завершения ------------
 
