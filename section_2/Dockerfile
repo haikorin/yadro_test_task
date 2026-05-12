@@ -7,4 +7,4 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 COPY check_status.py .
-CMD ["python3", "check_status.py"]
+CMD ["python3", "-u", "check_status.py"]
